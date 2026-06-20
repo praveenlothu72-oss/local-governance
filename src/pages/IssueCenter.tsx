@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { db, isSupabaseConfigured } from '../services/db';
 import type { Issue, Village, Profile } from '../types';
 import { InteractiveMap } from '../components/InteractiveMap';
-import { ThumbsUp, PlusCircle, ListFilter, MapPin, AlertCircle } from 'lucide-react';
+import { ThumbsUp, PlusCircle, ListFilter, MapPin, AlertCircle, CheckCircle } from 'lucide-react';
 
 interface IssueCenterProps {
   currentUser: Profile | null;
@@ -73,6 +73,19 @@ export const IssueCenter: React.FC<IssueCenterProps> = ({
       }
     } else {
       alert('You have already upvoted this issue!');
+    }
+  };
+
+  const handleResolveIssue = async (issueId: string) => {
+    if (!currentUser) return;
+    if (confirm('Are you sure you want to mark this issue as resolved?')) {
+      try {
+        await db.updateIssueStatus(issueId, 'COMPLETED', 'Resolved by citizen reporter');
+        triggerRefresh();
+        alert('Grievance marked as resolved! Thank you for updating governance records.');
+      } catch (err: any) {
+        alert('Error updating issue: ' + err.message);
+      }
     }
   };
 
@@ -269,19 +282,30 @@ export const IssueCenter: React.FC<IssueCenterProps> = ({
                         <span className="text-xs font-black text-slate-800 mt-0.5">👍 {issue.upvote_count} Votes</span>
                       </div>
 
-                      <button
-                        onClick={() => handleUpvote(issue.id)}
-                        disabled={issue.status === 'COMPLETED' || issue.status === 'REJECTED' || upvotedIssues[issue.id]}
-                        className={`
-                          flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all
-                          ${upvotedIssues[issue.id] 
-                            ? 'bg-emerald-100 text-emerald-800 cursor-default' 
-                            : 'bg-saffron text-slate-950 hover:bg-orange-400 hover:scale-105 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed'}
-                        `}
-                      >
-                        <ThumbsUp size={12} />
-                        <span>{upvotedIssues[issue.id] ? 'Upvoted' : 'Upvote Issue'}</span>
-                      </button>
+                      <div className="flex gap-2">
+                        {issue.citizen_id === currentUser?.id && issue.status !== 'COMPLETED' && issue.status !== 'REJECTED' && (
+                          <button
+                            onClick={() => handleResolveIssue(issue.id)}
+                            className="flex items-center gap-1 py-1.5 px-2.5 rounded-lg text-xs font-bold bg-green-600 hover:bg-green-700 text-white hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-sm"
+                          >
+                            <CheckCircle size={12} />
+                            <span>Mark Resolved</span>
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleUpvote(issue.id)}
+                          disabled={issue.status === 'COMPLETED' || issue.status === 'REJECTED' || upvotedIssues[issue.id]}
+                          className={`
+                            flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all
+                            ${upvotedIssues[issue.id] 
+                              ? 'bg-emerald-100 text-emerald-800 cursor-default' 
+                              : 'bg-saffron text-slate-950 hover:bg-orange-400 hover:scale-105 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed'}
+                          `}
+                        >
+                          <ThumbsUp size={12} />
+                          <span>{upvotedIssues[issue.id] ? 'Upvoted' : 'Upvote Issue'}</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>

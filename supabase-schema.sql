@@ -185,8 +185,9 @@ CREATE POLICY "Allow profile owners to edit details" ON profiles FOR UPDATE
 CREATE POLICY "Citizens can create issues" ON issues FOR INSERT
     WITH CHECK (auth.uid() = citizen_id);
 
-CREATE POLICY "Citizen can edit their own issues if pending" ON issues FOR UPDATE
-    USING (auth.uid() = citizen_id AND status = 'PENDING');
+CREATE POLICY "Citizen can edit or resolve their own issues" ON issues FOR UPDATE
+    USING (auth.uid() = citizen_id)
+    WITH CHECK (auth.uid() = citizen_id);
 
 -- Issue voting policies
 CREATE POLICY "Citizens can vote" ON issue_votes FOR INSERT
