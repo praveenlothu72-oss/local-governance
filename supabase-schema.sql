@@ -28,6 +28,8 @@ CREATE TABLE villages (
 CREATE TABLE profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     full_name VARCHAR(255) NOT NULL,
+    email VARCHAR(255),
+    aadhaar VARCHAR(12) UNIQUE,
     role VARCHAR(50) NOT NULL CHECK (role IN ('Citizen', 'MLA', 'Authority', 'Contractor', 'Auditor')),
     constituency UUID REFERENCES constituencies(id) ON DELETE SET NULL,
     village UUID REFERENCES villages(id) ON DELETE SET NULL,
@@ -276,10 +278,12 @@ CREATE TRIGGER on_issue_upvote
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-    INSERT INTO public.profiles (id, full_name, role, constituency, village)
+    INSERT INTO public.profiles (id, full_name, email, aadhaar, role, constituency, village)
     VALUES (
         NEW.id,
         COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email),
+        NEW.email,
+        NEW.raw_user_meta_data->>'aadhaar',
         COALESCE(NEW.raw_user_meta_data->>'role', 'Citizen'),
         NULL,
         NULL

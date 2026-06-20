@@ -246,21 +246,27 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
             </div>
 
             {/* Post comment form */}
-            <form onSubmit={handlePostComment} className="flex gap-2">
-              <input
-                type="text"
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                placeholder="Share your feedback or report visual defects..."
-                className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-saffron"
-              />
-              <button
-                type="submit"
-                className="px-3 bg-saffron text-slate-950 rounded-lg font-bold hover:bg-orange-400 transition-colors flex items-center justify-center"
-              >
-                <Send size={12} />
-              </button>
-            </form>
+            {currentUser ? (
+              <form onSubmit={handlePostComment} className="flex gap-2">
+                <input
+                  type="text"
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  placeholder="Share your feedback or report visual defects..."
+                  className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-saffron"
+                />
+                <button
+                  type="submit"
+                  className="px-3 bg-saffron text-slate-950 rounded-lg font-bold hover:bg-orange-400 transition-colors flex items-center justify-center cursor-pointer"
+                >
+                  <Send size={12} />
+                </button>
+              </form>
+            ) : (
+              <div className="p-3 bg-slate-100/80 rounded-xl border border-dashed border-slate-200 text-center text-xs text-slate-500">
+                Please <strong className="text-saffron">Sign In</strong> to post public comments and auditing feedback.
+              </div>
+            )}
           </div>
 
         </div>
@@ -344,8 +350,14 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
                 {[1, 2, 3, 4, 5].map((stars) => (
                   <button
                     key={stars}
-                    onClick={() => handleRateQuality(stars)}
-                    className="p-1 hover:scale-110 active:scale-95 transition-all text-yellow-400"
+                    onClick={() => {
+                      if (!currentUser) {
+                        alert('Please Sign In as a citizen to audit and rate project quality.');
+                        return;
+                      }
+                      handleRateQuality(stars);
+                    }}
+                    className={`p-1 hover:scale-110 active:scale-95 transition-all text-yellow-400 ${!currentUser ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     <Star 
                       size={28} 

@@ -478,16 +478,20 @@ const SEED_AUDIT_LOGS: AuditLog[] = [
 ];
 
 // Simulated Users
-export const SIMULATED_USERS: { id: string; name: string; role: UserRole; constituencyId: string; villageId: string; phone: string }[] = [
-  { id: 'u-citizen-1', name: 'Amit Patel (Citizen)', role: 'Citizen', constituencyId: 'indore-constituency-id', villageId: 'v-narmada', phone: '+91 91111 22222' },
-  { id: 'u-mla-1', name: 'Praveen Lothu (MLA / Admin)', role: 'MLA', constituencyId: 'indore-constituency-id', villageId: '', phone: '+91 90000 00001' },
-  { id: 'u-authority-1', name: 'Divisional Commissioner (Authority)', role: 'Authority', constituencyId: 'indore-constituency-id', villageId: '', phone: '+91 90000 00002' },
-  { id: 'u-contractor-patel', name: 'Rakesh Patel (Contractor)', role: 'Contractor', constituencyId: 'indore-constituency-id', villageId: '', phone: '+91 98270 12345' },
-  { id: 'u-auditor-1', name: 'State Auditor General (Auditor)', role: 'Auditor', constituencyId: 'indore-constituency-id', villageId: '', phone: '+91 90000 00003' }
+export const SIMULATED_USERS: { id: string; name: string; role: UserRole; constituencyId: string; villageId: string; phone: string; email?: string; aadhaar?: string }[] = [
+  { id: 'u-citizen-1', name: 'Amit Patel (Citizen)', role: 'Citizen', constituencyId: 'indore-constituency-id', villageId: 'v-narmada', phone: '+91 91111 22222', email: 'citizen@gov.in', aadhaar: '123456789012' },
+  { id: 'u-mla-1', name: 'Praveen Lothu (MLA / Admin)', role: 'MLA', constituencyId: 'indore-constituency-id', villageId: '', phone: '+91 90000 00001', email: 'mla.indore@gov.in' },
+  { id: 'u-authority-1', name: 'Divisional Commissioner (Authority)', role: 'Authority', constituencyId: 'indore-constituency-id', villageId: '', phone: '+91 90000 00002', email: 'commissioner.indore@gov.in' },
+  { id: 'u-contractor-patel', name: 'Rakesh Patel (Contractor)', role: 'Contractor', constituencyId: 'indore-constituency-id', villageId: '', phone: '+91 98270 12345', email: 'contractor.patel@infra.in' },
+  { id: 'u-auditor-1', name: 'State Auditor General (Auditor)', role: 'Auditor', constituencyId: 'indore-constituency-id', villageId: '', phone: '+91 90000 00003', email: 'auditor.state@gov.in' }
 ];
 
 // Active user tracking in Simulation Mode
-let activeUserId = SIMULATED_USERS[0].id; // Default to Amit Patel (Citizen)
+let activeUserId = localStorage.getItem('gov_active_user_id') || SIMULATED_USERS[0].id;
+
+const getAllSimulatedUsers = () => {
+  return getStore('gov_simulated_users', SIMULATED_USERS);
+};
 
 // Get state helper
 const getStore = <T>(key: string, seed: T): T => {
@@ -524,7 +528,8 @@ export const db = {
         .single();
       return profile;
     } else {
-      const user = SIMULATED_USERS.find(u => u.id === activeUserId);
+      if (activeUserId === 'guest' || !activeUserId) return null;
+      const user = getAllSimulatedUsers().find(u => u.id === activeUserId);
       if (!user) return null;
       return {
         id: user.id,
@@ -537,10 +542,16 @@ export const db = {
     }
   },
 
-  switchSimulatedUser: (userId: string): Profile => {
-    const user = SIMULATED_USERS.find(u => u.id === userId);
+  switchSimulatedUser: (userId: string): Profile | null => {
+    if (userId === 'guest') {
+      activeUserId = 'guest';
+      localStorage.setItem('gov_active_user_id', 'guest');
+      return null;
+    }
+    const user = getAllSimulatedUsers().find(u => u.id === userId);
     if (!user) throw new Error('User not found');
     activeUserId = userId;
+    localStorage.setItem('gov_active_user_id', userId);
     return {
       id: user.id,
       full_name: user.name,
@@ -549,6 +560,176 @@ export const db = {
       village: user.villageId || null,
       created_at: new Date('2026-01-01').toISOString()
     };
+  },
+
+  signUpUser: async (
+    email: string,
+    password: string,
+    fullName: string,
+    role: UserRole,
+    constituencyId?: string,
+    villageId?: string,
+    aadhaar?: string,
+    phone?: string,
+    companyName?: string
+  ): Promise<any> => {
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase!.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+            role,
+            aadhaar
+          }
+        }
+      });
+      if (error) throw error;
+      if (!data.user) throw new Error('Signup failed');
+
+      // Update constituency and village in profile (they default to NULL in handle_new_user trigger)
+      const { error: profileError } = await supabase!
+        .from('profiles')
+        .update({
+          constituency: constituencyId || null,
+          village: villageId || null
+        })
+        .eq('id', data.user.id);
+      if (profileError) throw profileError;
+
+      // If contractor, create a contractor record linked to profile
+      if (role === 'Contractor') {
+        const { error: contractorError } = await supabase!
+          .from('contractors')
+          .insert({
+            profile_id: data.user.id,
+            name: fullName,
+            company_name: companyName || 'Independent Contractor',
+            phone: phone || ''
+          });
+        if (contractorError) throw contractorError;
+      }
+
+      return data.user;
+    } else {
+      const newUserId = 'u-sim-' + Math.random().toString(36).substr(2, 9);
+      const simulatedUsers = getAllSimulatedUsers();
+      
+      const newUser = {
+        id: newUserId,
+        name: fullName,
+        role,
+        constituencyId: constituencyId || '',
+        villageId: villageId || '',
+        phone: phone || '',
+        email,
+        aadhaar
+      };
+      
+      simulatedUsers.push(newUser);
+      saveStore('gov_simulated_users', simulatedUsers);
+      
+      activeUserId = newUserId;
+      localStorage.setItem('gov_active_user_id', newUserId);
+      
+      if (role === 'Contractor') {
+        const contractors = getStore('gov_contractors', SEED_CONTRACTORS);
+        contractors.push({
+          id: 'c-sim-' + Math.random().toString(36).substr(2, 9),
+          profile_id: newUserId,
+          name: fullName,
+          company_name: companyName || 'Independent Contractor',
+          phone: phone || '',
+          rating: 5.0,
+          total_projects: 0,
+          complaints_count: 0,
+          created_at: new Date().toISOString()
+        });
+        saveStore('gov_contractors', contractors);
+      }
+      
+      return {
+        id: newUserId,
+        email,
+        full_name: fullName,
+        role
+      };
+    }
+  },
+
+  signInUser: async (identifier: string, password?: string, type: 'citizen' | 'official' = 'official'): Promise<Profile | null> => {
+    if (isSupabaseConfigured) {
+      let email = identifier;
+      
+      if (type === 'citizen' && /^\d{12}$/.test(identifier)) {
+        const { data, error } = await supabase!
+          .from('profiles')
+          .select('email')
+          .eq('aadhaar', identifier)
+          .single();
+        if (error || !data?.email) {
+          throw new Error('Aadhaar number not registered');
+        }
+        email = data.email;
+      }
+      
+      const { data, error } = await supabase!.auth.signInWithPassword({
+        email,
+        password: password || ''
+      });
+      if (error) throw error;
+      if (!data.user) throw new Error('Login failed');
+      
+      const { data: profile, error: profileError } = await supabase!
+        .from('profiles')
+        .select('*')
+        .eq('id', data.user.id)
+        .single();
+      if (profileError) throw profileError;
+      return profile;
+    } else {
+      const allUsers = getAllSimulatedUsers();
+      let user;
+      
+      if (type === 'citizen' && /^\d{12}$/.test(identifier)) {
+        user = allUsers.find(u => u.aadhaar === identifier || (u.id === 'u-citizen-1' && identifier === '123456789012'));
+      } else {
+        user = allUsers.find(u => u.email?.toLowerCase() === identifier.toLowerCase() || 
+          (u.id === 'u-mla-1' && identifier.includes('mla')) ||
+          (u.id === 'u-authority-1' && identifier.includes('commissioner')) ||
+          (u.id === 'u-contractor-patel' && identifier.includes('contractor')) ||
+          (u.id === 'u-auditor-1' && identifier.includes('auditor')) ||
+          (u.id === 'u-citizen-1' && identifier.includes('citizen'))
+        );
+      }
+      
+      if (!user) {
+        throw new Error('Invalid credentials');
+      }
+      
+      activeUserId = user.id;
+      localStorage.setItem('gov_active_user_id', user.id);
+      
+      return {
+        id: user.id,
+        full_name: user.name,
+        role: user.role,
+        constituency: user.constituencyId || null,
+        village: user.villageId || null,
+        created_at: new Date('2026-01-01').toISOString()
+      };
+    }
+  },
+
+  signOutUser: async (): Promise<void> => {
+    if (isSupabaseConfigured) {
+      const { error } = await supabase!.auth.signOut();
+      if (error) throw error;
+    } else {
+      activeUserId = 'guest';
+      localStorage.setItem('gov_active_user_id', 'guest');
+    }
   },
 
   // Constituency
@@ -979,7 +1160,7 @@ export const db = {
   },
 
   addAuditLog: async (action: string, entityType: string, entityId: string, oldVal: any, newVal: any): Promise<AuditLog> => {
-    const activeUser = SIMULATED_USERS.find(u => u.id === activeUserId);
+    const activeUser = getAllSimulatedUsers().find(u => u.id === activeUserId);
     const newLog: AuditLog = {
       id: 'a-' + Math.random().toString(36).substr(2, 9),
       user_id: activeUserId,

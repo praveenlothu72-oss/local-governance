@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { db } from './services/db';
+import { db, isSupabaseConfigured, supabase } from './services/db';
 import type { Profile } from './types';
 import Sidebar from './components/Sidebar';
 import Navbar from './components/Navbar';
 import DemoHelper from './components/DemoHelper';
 
 // Pages
+import AuthPage from './pages/AuthPage';
 import LandingPage from './pages/LandingPage';
 import CitizenDashboard from './pages/CitizenDashboard';
 import FundTransparency from './pages/FundTransparency';
@@ -24,19 +25,51 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
   const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
   const [issueCenterTab, setIssueCenterTab] = useState<'vote' | 'raise'>('vote');
+  
+  const [guestMode, setGuestMode] = useState<boolean>(() => {
+    const activeId = localStorage.getItem('gov_active_user_id');
+    return activeId === 'guest';
+  });
 
-  // Load profile
+  // Load profile and sync with Supabase session transitions
   useEffect(() => {
     const fetchUser = async () => {
       const user = await db.getCurrentUser();
       setCurrentUser(user);
     };
     fetchUser();
+
+    if (isSupabaseConfigured && supabase) {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        async (event, _session) => {
+          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+            const user = await db.getCurrentUser();
+            setCurrentUser(user);
+            setGuestMode(false);
+          } else if (event === 'SIGNED_OUT') {
+            setCurrentUser(null);
+            setGuestMode(false);
+          }
+        }
+      );
+      return () => {
+        subscription.unsubscribe();
+      };
+    }
   }, [refreshTrigger]);
 
   const handleUserChange = (userId: string) => {
     const newProfile = db.switchSimulatedUser(userId);
     setCurrentUser(newProfile);
+    setGuestMode(false);
+    setRefreshTrigger(prev => prev + 1);
+  };
+
+  const handleSignOut = async () => {
+    await db.signOutUser();
+    setCurrentUser(null);
+    setGuestMode(false);
+    setActivePage('landing');
     setRefreshTrigger(prev => prev + 1);
   };
 
@@ -129,6 +162,21 @@ function App() {
     }
   };
 
+  if (currentUser === null && !guestMode) {
+    return (
+      <AuthPage 
+        onLoginSuccess={() => {
+          setRefreshTrigger(prev => prev + 1);
+        }} 
+        onBypassGuest={() => {
+          db.switchSimulatedUser('guest');
+          setGuestMode(true);
+          setActivePage('landing');
+        }}
+      />
+    );
+  }
+
   return (
     <div className="flex h-screen bg-slate-100 overflow-hidden font-sans antialiased text-slate-800">
       
@@ -149,6 +197,8 @@ function App() {
           onUserChange={handleUserChange}
           setSidebarOpen={setSidebarOpen}
           activePage={activePage === 'vote-issue' && issueCenterTab === 'raise' ? 'raise-issue' : activePage}
+          onSignOut={handleSignOut}
+          onSignIn={() => setGuestMode(false)}
         />
 
         {/* Dynamic Page Scroll Content */}

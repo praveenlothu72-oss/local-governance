@@ -1,5 +1,5 @@
 import React from 'react';
-import { Menu, User } from 'lucide-react';
+import { Menu, User, LogIn, LogOut } from 'lucide-react';
 import type { UserRole, Profile } from '../types';
 import { SIMULATED_USERS, isSupabaseConfigured } from '../services/db';
 
@@ -8,13 +8,17 @@ interface NavbarProps {
   onUserChange: (userId: string) => void;
   setSidebarOpen: (open: boolean) => void;
   activePage: string;
+  onSignOut: () => void;
+  onSignIn: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   currentUser,
   onUserChange,
   setSidebarOpen,
-  activePage
+  activePage,
+  onSignOut,
+  onSignIn
 }) => {
   const getPageTitle = () => {
     switch (activePage) {
@@ -75,29 +79,61 @@ export const Navbar: React.FC<NavbarProps> = ({
           <span className={`inline-block w-2.5 h-2.5 rounded-full ${isSupabaseConfigured ? 'bg-emerald-500' : 'bg-orange-500'}`} title={isSupabaseConfigured ? 'Supabase Active' : 'Simulation Mode'} />
         </div>
 
-        {/* Simulated Role Selection */}
-        <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 shadow-sm">
-          <User size={14} className="text-slate-500 hidden sm:inline" />
-          <div className="flex flex-col sm:mr-1">
-            <label className="text-[8px] text-slate-400 font-bold uppercase leading-none">Demonstration Persona</label>
-            <select
-              value={currentUser?.id || ''}
-              onChange={(e) => onUserChange(e.target.value)}
-              className="text-xs font-semibold text-slate-700 bg-transparent border-none outline-none p-0 cursor-pointer focus:ring-0"
+        {currentUser ? (
+          <div className="flex items-center gap-2 md:gap-3">
+            {/* If in simulation mode, we show the dropdown, otherwise plain display */}
+            {!isSupabaseConfigured ? (
+              <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 md:px-2.5 md:py-1.5 shadow-sm">
+                <User size={14} className="text-slate-500 hidden sm:inline" />
+                <div className="flex flex-col sm:mr-1">
+                  <label className="text-[8px] text-slate-400 font-bold uppercase leading-none">Demonstration Persona</label>
+                  <select
+                    value={currentUser.id}
+                    onChange={(e) => onUserChange(e.target.value)}
+                    className="text-xs font-semibold text-slate-700 bg-transparent border-none outline-none p-0 cursor-pointer focus:ring-0"
+                  >
+                    {SIMULATED_USERS.map(user => (
+                      <option key={user.id} value={user.id}>
+                        {user.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <span className={`hidden md:inline px-2 py-0.5 text-[10px] font-bold rounded-full border ${getRoleBadgeColor(currentUser.role)}`}>
+                  {currentUser.role}
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1 md:py-1.5 shadow-sm">
+                <User size={14} className="text-slate-500 hidden sm:inline" />
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-slate-700 leading-none">{currentUser.full_name}</span>
+                  <span className="text-[9px] text-slate-400 font-semibold">{currentUser.role}</span>
+                </div>
+                <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full border ${getRoleBadgeColor(currentUser.role)}`}>
+                  {currentUser.role}
+                </span>
+              </div>
+            )}
+
+            {/* Logout button */}
+            <button
+              onClick={onSignOut}
+              className="p-1.5 md:p-2 text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-lg border border-slate-200 transition-all cursor-pointer"
+              title="Sign Out"
             >
-              {SIMULATED_USERS.map(user => (
-                <option key={user.id} value={user.id}>
-                  {user.name}
-                </option>
-              ))}
-            </select>
+              <LogOut size={16} />
+            </button>
           </div>
-          {currentUser && (
-            <span className={`hidden md:inline px-2 py-0.5 text-[10px] font-bold rounded-full border ${getRoleBadgeColor(currentUser.role)}`}>
-              {currentUser.role}
-            </span>
-          )}
-        </div>
+        ) : (
+          <button
+            onClick={onSignIn}
+            className="flex items-center gap-1.5 px-3 py-1.5 md:px-4 md:py-2 bg-gradient-to-r from-saffron to-orange-500 hover:from-orange-400 hover:to-amber-500 text-slate-950 text-xs font-black rounded-lg transition-colors cursor-pointer shadow-sm"
+          >
+            <LogIn size={14} />
+            <span>Sign In</span>
+          </button>
+        )}
       </div>
     </header>
   );

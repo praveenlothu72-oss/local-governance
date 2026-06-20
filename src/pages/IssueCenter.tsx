@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { db } from '../services/db';
 import type { Issue, Village, Profile } from '../types';
 import { InteractiveMap } from '../components/InteractiveMap';
-import { ThumbsUp, PlusCircle, ListFilter, MapPin } from 'lucide-react';
+import { ThumbsUp, PlusCircle, ListFilter, MapPin, AlertCircle } from 'lucide-react';
 
 interface IssueCenterProps {
   currentUser: Profile | null;
@@ -54,7 +54,10 @@ export const IssueCenter: React.FC<IssueCenterProps> = ({
   }, [refreshTrigger, currentUser]);
 
   const handleUpvote = async (issueId: string) => {
-    if (!currentUser) return;
+    if (!currentUser) {
+      alert('Please Sign In as an authenticated citizen to upvote public issues.');
+      return;
+    }
     if (upvotedIssues[issueId]) {
       alert('You have already upvoted this issue!');
       return;
@@ -291,142 +294,165 @@ export const IssueCenter: React.FC<IssueCenterProps> = ({
 
       {/* Tab 2: Raise Issue Form */}
       {activeTab === 'raise' && (
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-          {/* Form */}
-          <form onSubmit={handleRaiseIssue} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm lg:col-span-3 space-y-4 text-xs">
-            <h3 className="font-bold text-slate-800 text-xs uppercase tracking-wider border-b border-slate-100 pb-2">
-              New Public Concern Form
-            </h3>
-
-            <div className="space-y-1">
-              <label className="font-bold text-slate-600 block">Issue Title</label>
-              <input
-                type="text"
-                required
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. Broken water valve causing street floods"
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-saffron focus:outline-none"
-              />
+        !currentUser ? (
+          <div className="bg-white p-12 rounded-2xl border border-slate-200 shadow-sm text-center space-y-4 max-w-lg mx-auto my-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
+            <div className="w-16 h-16 rounded-full bg-orange-50 text-saffron flex items-center justify-center mx-auto">
+              <AlertCircle size={32} />
             </div>
+            <h3 className="font-extrabold text-slate-800 text-lg">Aadhaar Authentication Required</h3>
+            <p className="text-slate-500 text-xs leading-relaxed">
+              To prevent duplicate complaints, spam reports, or false claims, all citizens must verify their identity using Aadhaar to register an official public concern.
+            </p>
+            <div className="pt-2">
+              <span className="text-[10px] text-slate-400 font-medium block mb-4">Your report will be automatically geo-tagged to hold government agencies accountable.</span>
+              <button
+                onClick={() => {
+                  alert('Please click the "Sign In" button in the top navigation bar to log in or register.');
+                }}
+                className="px-6 py-2.5 bg-gradient-to-r from-saffron to-orange-500 hover:from-orange-400 hover:to-amber-500 text-slate-950 text-xs font-black rounded-xl shadow-md transition-all cursor-pointer"
+              >
+                Sign In / Authenticate Now
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+            {/* Form */}
+            <form onSubmit={handleRaiseIssue} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm lg:col-span-3 space-y-4 text-xs">
+              <h3 className="font-bold text-slate-800 text-xs uppercase tracking-wider border-b border-slate-100 pb-2">
+                New Public Concern Form
+              </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div className="space-y-1">
-                <label className="font-bold text-slate-600 block">Village</label>
-                <select
+                <label className="font-bold text-slate-600 block">Issue Title</label>
+                <input
+                  type="text"
                   required
-                  value={selectedVillageId}
-                  onChange={(e) => setSelectedVillageId(e.target.value)}
-                  className="w-full px-2 py-2 border border-slate-200 rounded-lg bg-white"
-                >
-                  <option value="" disabled>Select Village</option>
-                  {villages.map(v => (
-                    <option key={v.id} value={v.id}>{v.name}</option>
-                  ))}
-                </select>
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="e.g. Broken water valve causing street floods"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-saffron focus:outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-600 block">Village</label>
+                  <select
+                    required
+                    value={selectedVillageId}
+                    onChange={(e) => setSelectedVillageId(e.target.value)}
+                    className="w-full px-2 py-2 border border-slate-200 rounded-lg bg-white"
+                  >
+                    <option value="" disabled>Select Village</option>
+                    {villages.map(v => (
+                      <option key={v.id} value={v.id}>{v.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-600 block">Category</label>
+                  <select
+                    required
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value as any)}
+                    className="w-full px-2 py-2 border border-slate-200 rounded-lg bg-white"
+                  >
+                    <option value="Roads">Roads</option>
+                    <option value="Water">Water</option>
+                    <option value="Schools">Schools</option>
+                    <option value="Healthcare">Healthcare</option>
+                    <option value="Drainage">Drainage</option>
+                    <option value="Streetlights">Streetlights</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-600 block">Urgency Level</label>
+                  <select
+                    required
+                    value={urgency}
+                    onChange={(e) => setUrgency(e.target.value as any)}
+                    className="w-full px-2 py-2 border border-slate-200 rounded-lg bg-white"
+                  >
+                    <option value="LOW">Low</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="HIGH">High</option>
+                    <option value="CRITICAL">Critical</option>
+                  </select>
+                </div>
               </div>
 
               <div className="space-y-1">
-                <label className="font-bold text-slate-600 block">Category</label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value as any)}
-                  className="w-full px-2 py-2 border border-slate-200 rounded-lg bg-white"
-                >
-                  <option value="Roads">Roads</option>
-                  <option value="Water">Water</option>
-                  <option value="Schools">Schools</option>
-                  <option value="Healthcare">Healthcare</option>
-                  <option value="Drainage">Drainage</option>
-                  <option value="Streetlights">Streetlights</option>
-                  <option value="Other">Other</option>
-                </select>
+                <label className="font-bold text-slate-600 block">Detailed Description</label>
+                <textarea
+                  required
+                  rows={4}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Detail the issue: how long it has been broken, size/location of damage, and impact on village life..."
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-saffron focus:outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                <div>
+                  <span className="font-bold text-slate-500 block mb-1">Latitude</span>
+                  <input
+                    type="text"
+                    disabled
+                    value={lat !== null ? lat.toString() : 'Select on map'}
+                    className="w-full px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-slate-500 text-xs"
+                  />
+                </div>
+                <div>
+                  <span className="font-bold text-slate-500 block mb-1">Longitude</span>
+                  <input
+                    type="text"
+                    disabled
+                    value={lng !== null ? lng.toString() : 'Select on map'}
+                    className="w-full px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-slate-500 text-xs"
+                  />
+                </div>
               </div>
 
               <div className="space-y-1">
-                <label className="font-bold text-slate-600 block">Urgency</label>
-                <select
-                  value={urgency}
-                  onChange={(e) => setUrgency(e.target.value as any)}
-                  className="w-full px-2 py-2 border border-slate-200 rounded-lg bg-white"
-                >
-                  <option value="LOW">LOW</option>
-                  <option value="MEDIUM">MEDIUM</option>
-                  <option value="HIGH">HIGH</option>
-                  <option value="CRITICAL">CRITICAL (Risk to health/safety)</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <label className="font-bold text-slate-600 block">Grievance Description</label>
-              <textarea
-                required
-                rows={4}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Explain the issue in detail. Who is impacted? How long has it been happening? NOTE: Personal grievances are not allowed."
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-saffron focus:outline-none"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="font-bold text-slate-600 block">Latitude Coordinate</label>
+                <label className="font-bold text-slate-600 block">Photo Proof Link (URL)</label>
                 <input
                   type="text"
-                  readOnly
-                  placeholder="Tap map to set"
-                  value={lat !== null ? lat : ''}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+                  value={photoUrl}
+                  onChange={(e) => setPhotoUrl(e.target.value)}
+                  placeholder="Paste mock image URL (optional)"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-saffron focus:outline-none"
                 />
               </div>
-              <div className="space-y-1">
-                <label className="font-bold text-slate-600 block">Longitude Coordinate</label>
-                <input
-                  type="text"
-                  readOnly
-                  placeholder="Tap map to set"
-                  value={lng !== null ? lng : ''}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"
-                />
-              </div>
-            </div>
 
-            <div className="space-y-1">
-              <label className="font-bold text-slate-600 block">Photo Proof Link (URL)</label>
-              <input
-                type="text"
-                value={photoUrl}
-                onChange={(e) => setPhotoUrl(e.target.value)}
-                placeholder="Paste mock image URL (optional)"
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-saffron focus:outline-none"
-              />
-            </div>
+              <button
+                type="submit"
+                className="w-full py-3 bg-saffron text-slate-950 font-bold rounded-lg hover:bg-orange-400 transition-all text-xs shadow-lg shadow-orange-500/10 cursor-pointer"
+              >
+                Submit Grievance
+              </button>
+            </form>
 
-            <button
-              type="submit"
-              className="w-full py-3 bg-saffron text-slate-950 font-bold rounded-lg hover:bg-orange-400 transition-all text-xs shadow-lg shadow-orange-500/10"
-            >
-              Submit Grievance
-            </button>
-          </form>
-
-          {/* Location Picker Map */}
-          <div className="lg:col-span-2 space-y-3">
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-2">
-              <h3 className="font-bold text-slate-800 text-xs uppercase tracking-wider">Geo-location Pinner</h3>
-              <p className="text-[10px] text-slate-400">Click on the map surface near your village to drop the complaint pin and capture coordinates.</p>
-              <div className="h-[300px] rounded-xl overflow-hidden relative">
-                <InteractiveMap 
-                  isSelectorMode={true}
-                  selectedCoords={lat !== null && lng !== null ? [lat, lng] : null}
-                  onCoordsSelect={handleCoordsSelect}
-                />
+            {/* Location Picker Map */}
+            <div className="lg:col-span-2 space-y-3">
+              <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+                <h3 className="font-bold text-slate-800 text-xs uppercase tracking-wider">Geo-location Pinner</h3>
+                <p className="text-[10px] text-slate-400">Click on the map surface near your village to drop the complaint pin and capture coordinates.</p>
+                <div className="h-[300px] rounded-xl overflow-hidden relative">
+                  <InteractiveMap 
+                    isSelectorMode={true}
+                    selectedCoords={lat !== null && lng !== null ? [lat, lng] : null}
+                    onCoordsSelect={handleCoordsSelect}
+                  />
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )
       )}
     </div>
   );
