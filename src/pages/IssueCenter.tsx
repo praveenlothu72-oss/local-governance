@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { db } from '../services/db';
+import { db, isSupabaseConfigured } from '../services/db';
 import type { Issue, Village, Profile } from '../types';
 import { InteractiveMap } from '../components/InteractiveMap';
 import { ThumbsUp, PlusCircle, ListFilter, MapPin, AlertCircle } from 'lucide-react';
@@ -93,10 +93,13 @@ export const IssueCenter: React.FC<IssueCenterProps> = ({
       return;
     }
 
+    const villageObj = villages.find(v => v.id === selectedVillageId);
+    const issueConstituencyId = villageObj?.constituency_id || currentUser.constituency || (isSupabaseConfigured ? '11111111-1111-1111-1111-111111111111' : 'indore-constituency-id');
+
     // Citizen raises issue: status PENDING, upvotes 0
     await db.createIssue({
       citizen_id: currentUser.id,
-      constituency_id: currentUser.constituency || 'indore-constituency-id',
+      constituency_id: issueConstituencyId,
       village_id: selectedVillageId,
       title: title.trim(),
       description: description.trim(),
