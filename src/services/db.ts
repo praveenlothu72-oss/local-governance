@@ -823,9 +823,10 @@ export const db = {
     };
 
     if (isSupabaseConfigured) {
+      const { id, created_at, ...supabasePayload } = newProject;
       const { data, error } = await supabase!
         .from('projects')
-        .insert(newProject)
+        .insert(supabasePayload)
         .select()
         .single();
       if (error) throw error;
@@ -928,9 +929,10 @@ export const db = {
     };
 
     if (isSupabaseConfigured) {
+      const { id, created_at, ...supabasePayload } = newProof;
       const { data, error } = await supabase!
         .from('project_proofs')
-        .insert(newProof)
+        .insert(supabasePayload)
         .select()
         .single();
       if (error) throw error;
@@ -978,9 +980,10 @@ export const db = {
     };
 
     if (isSupabaseConfigured) {
+      const { id, created_at, ...supabasePayload } = newIssue;
       const { data, error } = await supabase!
         .from('issues')
-        .insert(newIssue)
+        .insert(supabasePayload)
         .select()
         .single();
       if (error) throw error;
@@ -1135,9 +1138,10 @@ export const db = {
     };
 
     if (isSupabaseConfigured) {
+      const { id, created_at, ...supabasePayload } = newComment;
       const { data, error } = await supabase!
         .from('comments')
-        .insert(newComment)
+        .insert(supabasePayload)
         .select()
         .single();
       if (error) throw error;
