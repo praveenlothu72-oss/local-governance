@@ -295,3 +295,48 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- ==========================================
+-- 🚀 MOCK DEMO SEED DATA INSERT QUERIES
+-- ==========================================
+
+-- 1. Constituencies
+INSERT INTO constituencies (id, name, district, state, total_funds_received, financial_year)
+VALUES ('11111111-1111-1111-1111-111111111111', 'Indore-4 Constituency', 'Indore', 'Madhya Pradesh', 1000000000, '2025-2026')
+ON CONFLICT (id) DO NOTHING;
+
+-- 2. Villages
+INSERT INTO villages (id, constituency_id, name, population) VALUES
+('22222222-2222-2222-2222-222222222222', '11111111-1111-1111-1111-111111111111', 'Ganga Village', 4500),
+('33333333-3333-3333-3333-333333333333', '11111111-1111-1111-1111-111111111111', 'Narmada Village', 3200),
+('44444444-4444-4444-4444-444444444444', '11111111-1111-1111-1111-111111111111', 'Yamuna Village', 5100),
+('55555555-5555-5555-5555-555555555555', '11111111-1111-1111-1111-111111111111', 'Godavari Village', 2800),
+('66666666-6666-6666-6666-666666666666', '11111111-1111-1111-1111-111111111111', 'Kaveri Village', 3900)
+ON CONFLICT (id) DO NOTHING;
+
+-- 3. Contractors (No profile assigned yet)
+INSERT INTO contractors (id, profile_id, name, company_name, phone, rating, total_projects, complaints_count) VALUES
+('77777777-7777-7777-7777-777777777777', NULL, 'Rakesh Patel', 'Patel Infrastructure', '+91 98270 12345', 4.2, 12, 1),
+('88888888-8888-8888-8888-888888888888', NULL, 'Amit Sharma', 'Sharma Construction Co.', '+91 99770 67890', 4.8, 8, 0),
+('99999999-9999-9999-9999-999999999999', NULL, 'Sanjay Verma', 'Vikas Developers Ltd.', '+91 94250 54321', 2.7, 15, 6)
+ON CONFLICT (id) DO NOTHING;
+
+-- 4. Fund Allocations
+INSERT INTO fund_allocations (constituency_id, village_id, category, allocated_amount, used_amount, year) VALUES
+('11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222', 'Schools', 15000000, 12000000, '2025-2026'),
+('11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222', 'Streetlights', 3000000, 2500000, '2025-2026'),
+('11111111-1111-1111-1111-111111111111', '33333333-3333-3333-3333-333333333333', 'Roads', 20000000, 20000000, '2025-2026'),
+('11111111-1111-1111-1111-111111111111', '33333333-3333-3333-3333-333333333333', 'Water', 12000000, 11000000, '2025-2026'),
+('11111111-1111-1111-1111-111111111111', '44444444-4444-4444-4444-444444444444', 'Healthcare', 8000000, 4500000, '2025-2026'),
+('11111111-1111-1111-1111-111111111111', '44444444-4444-4444-4444-444444444444', 'Drainage', 10000000, 0, '2025-2026'),
+('11111111-1111-1111-1111-111111111111', '55555555-5555-5555-5555-555555555555', 'Drainage', 9000000, 7500000, '2025-2026'),
+('11111111-1111-1111-1111-111111111111', '55555555-5555-5555-5555-555555555555', 'Water', 2000000, 1500000, '2025-2026'),
+('11111111-1111-1111-1111-111111111111', '66666666-6666-6666-6666-666666666666', 'Water', 10000000, 15000000, '2025-2026');
+
+-- 5. Projects
+INSERT INTO projects (id, constituency_id, village_id, title, category, description, budget_allocated, amount_spent, contractor_id, status, start_date, expected_end_date, actual_end_date, quality_rating) VALUES
+('10101010-1010-1010-1010-101010101010', '11111111-1111-1111-1111-111111111111', '33333333-3333-3333-3333-333333333333', 'Main Road Asphaltation', 'Roads', 'Re-laying and asphaltation of the main access road connecting Narmada village to State Highway 27.', 20000000, 20000000, '77777777-7777-7777-7777-777777777777', 'COMPLETED', '2025-05-10', '2025-09-30', '2025-09-28', 4),
+('20202020-2020-2020-2020-202020202020', '11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222', 'Village School Expansion', 'Schools', 'Construction of 4 new smart classrooms and a science laboratory at Ganga Primary School.', 15000000, 12000000, '88888888-8888-8888-8888-888888888888', 'COMPLETED', '2025-06-01', '2025-12-15', '2025-12-10', 5),
+('30303030-3030-3030-3030-303030303030', '11111111-1111-1111-1111-111111111111', '66666666-6666-6666-6666-666666666666', 'Drinking Water Pipeline', 'Water', 'Setting up overhead water storage tank and laying pipelines to households across Kaveri village.', 10000000, 15000000, '99999999-9999-9999-9999-999999999999', 'COMPLETED', '2025-05-15', '2025-11-30', '2025-12-12', 3),
+('40404040-4040-4040-4040-404040404040', '11111111-1111-1111-1111-111111111111', '44444444-4444-4444-4444-444444444444', 'Primary Health Center Renovation', 'Healthcare', 'Renovation of clinic, adding emergency beds and solar power backup.', 8000000, 4500000, '88888888-8888-8888-8888-888888888888', 'UNDER_WORK', '2025-10-01', '2026-03-15', NULL, NULL);
+
