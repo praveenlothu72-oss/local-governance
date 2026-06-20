@@ -588,12 +588,14 @@ export const db = {
       if (error) throw error;
       if (!data.user) throw new Error('Signup failed');
 
-      // Update constituency and village in profile (they default to NULL in handle_new_user trigger)
+      // Update constituency, village, email, and aadhaar in profile
       const { error: profileError } = await supabase!
         .from('profiles')
         .update({
           constituency: constituencyId || null,
-          village: villageId || null
+          village: villageId || null,
+          aadhaar: aadhaar || null,
+          email: email
         })
         .eq('id', data.user.id);
       if (profileError) throw profileError;
